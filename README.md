@@ -1,2 +1,7 @@
-# catastrophe-risk-dashboard
-Global catastrophe risk modelling dashboard using Python, Streamlit, and EM-DAT disaster data.
+# Global Catastrophe Risk Dashboard
+
+Interactive catastrophe risk modelling dashboard using EM-DAT disaster data.
+
+Live dashboard:
+
+https://catastrophe-risk-dashboard-honsuplmsamrnkc722wejj.streamlit.app
