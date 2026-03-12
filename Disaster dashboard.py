@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-df = pd.read_excel("/Users/apple/PycharmProjects/Catastrophe Risk Modelling/emdat_disasters.xlsx")
+df = pd.read_excel("emdat_disasters.xlsx")
 
 losses = df["Total Damage ('000 US$)"].dropna()
 losses = losses[losses > 0]
@@ -12,5 +12,4 @@ hazard = st.selectbox("Select Disaster Type", df["Disaster Type"].unique())
 
 filtered = df[df["Disaster Type"] == hazard]
 
-st.bar_chart(filtered.groupby("Start Year").size())
-
+st.bar_chart(filtered.groupby("Start Year").size().sort_index())
