@@ -6,6 +6,7 @@ import plotly.express as px
 
 st.set_page_config(page_title="Global Disaster Risk Dashboard", layout="wide")
 
+
 @st.cache_data
 def load_data():
     file_path = Path(__file__).parent / "emdat_disasters.xlsx"
@@ -24,12 +25,13 @@ def load_data():
 
     return df
 
+
 df = load_data()
 
 st.title("Global Disaster Risk Dashboard")
 st.markdown("Interactive catastrophe risk dashboard using full EM-DAT disaster data.")
 
-# Cleaning core fields
+# Cleaning main dataset
 data = df.copy()
 data = data.dropna(subset=["Start Year"])
 data["Start Year"] = data["Start Year"].astype(int)
@@ -38,7 +40,25 @@ if data.empty:
     st.warning("No valid data available.")
     st.stop()
 
-# Metrics
+
+# FIRST SECTION
+
+hazard_options = sorted(data["Disaster Type"].dropna().unique())
+
+selected_hazard = st.selectbox(
+    "Select Disaster Type",
+    hazard_options
+)
+
+hazard_data = data[data["Disaster Type"] == selected_hazard].copy()
+
+st.subheader(f"Number of {selected_hazard} Disasters Per Year")
+hazard_events_per_year = hazard_data.groupby("Start Year").size().sort_index()
+st.bar_chart(hazard_events_per_year)
+
+
+# OVERALL METRICS, full dataset
+
 total_events = len(data)
 total_loss = data["Total Damage ('000 US$)"].sum(skipna=True)
 total_deaths = data["Total Deaths"].sum(skipna=True)
@@ -46,11 +66,21 @@ avg_loss = data["Total Damage ('000 US$)"].mean(skipna=True)
 
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Total Events", f"{total_events:,}")
-col2.metric("Total Economic Loss ('000 US$)", f"{total_loss:,.0f}" if pd.notna(total_loss) else "N/A")
-col3.metric("Total Deaths", f"{total_deaths:,.0f}" if pd.notna(total_deaths) else "N/A")
-col4.metric("Average Loss per Event ('000 US$)", f"{avg_loss:,.0f}" if pd.notna(avg_loss) else "N/A")
+col2.metric(
+    "Total Economic Loss ('000 US$)",
+    f"{total_loss:,.0f}" if pd.notna(total_loss) else "N/A"
+)
+col3.metric(
+    "Total Deaths",
+    f"{total_deaths:,.0f}" if pd.notna(total_deaths) else "N/A"
+)
+col4.metric(
+    "Average Loss per Event ('000 US$)",
+    f"{avg_loss:,.0f}" if pd.notna(avg_loss) else "N/A"
+)
 
-#Number of Disasters Per Type
+# DISASTERS BY TYPE
+
 st.subheader("Number of Disasters by Type")
 
 events_by_type = (
@@ -66,16 +96,19 @@ fig_type_events = px.bar(
     labels={"x": "Disaster Type", "y": "Number of Events"},
     title="Top 10 Disaster Types by Frequency"
 )
-
 st.plotly_chart(fig_type_events, use_container_width=True)
 
-# Events per year
+
+# EVENTS PER YEAR
+
 st.subheader("Number of Disasters Per Year")
 events_per_year = data.groupby("Start Year").size().sort_index()
 st.bar_chart(events_per_year)
 
-# Economic loss by year
+# ECONOMIC LOSS BY YEAR
+
 st.subheader("Economic Loss by Year")
+
 loss_by_year = (
     data.groupby("Start Year")["Total Damage ('000 US$)"]
     .sum()
@@ -91,8 +124,11 @@ if not loss_by_year.empty:
     )
     st.plotly_chart(fig_loss_year, use_container_width=True)
 
-# Top disaster types by loss
+
+# TOP DISASTER TYPES BY LOSS
+
 st.subheader("Top 10 Disaster Types by Economic Loss")
+
 loss_by_type = (
     data.groupby("Disaster Type")["Total Damage ('000 US$)"]
     .sum(min_count=1)
@@ -102,16 +138,19 @@ loss_by_type = (
 )
 
 if not loss_by_type.empty:
-    fig_type = px.bar(
+    fig_type_loss = px.bar(
         x=loss_by_type.index,
         y=loss_by_type.values,
         labels={"x": "Disaster Type", "y": "Total Damage ('000 US$)"},
         title="Top 10 Disaster Types by Economic Loss",
     )
-    st.plotly_chart(fig_type, use_container_width=True)
+    st.plotly_chart(fig_type_loss, use_container_width=True)
 
-# Top countries
+
+# TOP COUNTRIES BY LOSS
+
 st.subheader("Top 10 Countries by Disaster Loss")
+
 loss_by_country = (
     data.groupby("Country")["Total Damage ('000 US$)"]
     .sum(min_count=1)
@@ -129,8 +168,11 @@ if not loss_by_country.empty:
     )
     st.plotly_chart(fig_country, use_container_width=True)
 
-# Distribution of losses
+
+# DISTRIBUTION OF LOSSES
+
 st.subheader("Distribution of Disaster Losses")
+
 losses = data["Total Damage ('000 US$)"].dropna()
 losses = losses[losses > 0]
 
@@ -150,8 +192,11 @@ elif len(losses) > 0:
 else:
     st.info("No positive loss data available in the dataset.")
 
-# Monte Carlo simulation
+
+# MONTE CARLO SIMULATION
+
 st.subheader("Monte Carlo Catastrophe Loss Simulation")
+
 if len(losses) > 0:
     np.random.seed(42)
     simulated_losses = np.random.choice(losses, size=1000, replace=True)
@@ -175,7 +220,9 @@ if len(losses) > 0:
 else:
     st.info("Not enough loss data available for simulation.")
 
-# Data preview
+
+# DATA PREVIEW
+
 st.subheader("Data Preview")
 
 columns_to_show = [
