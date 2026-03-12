@@ -24,11 +24,13 @@ def load_data():
 
     return df
 
+
 df = load_data()
 
 st.title("Global Disaster Risk Dashboard")
 st.markdown("Interactive catastrophe risk dashboard using EM-DAT disaster data.")
 
+# Sidebar filters
 st.sidebar.header("Filters")
 
 hazard_options = sorted(df["Disaster Type"].dropna().unique())
@@ -36,37 +38,20 @@ selected_hazard = st.sidebar.selectbox("Select Disaster Type", hazard_options)
 
 filtered = df[df["Disaster Type"] == selected_hazard].copy()
 
-# Clean Start Year before slider
-filtered = filtered.dropna(subset=["Start Year"])
-filtered["Start Year"] = filtered["Start Year"].astype(int)
-
-if filtered.empty:
-    st.warning("No valid data available for this disaster type.")
-    st.stop()
-
 year_min = int(filtered["Start Year"].min())
 year_max = int(filtered["Start Year"].max())
 
-# Handle single-year case safely
-if year_min == year_max:
-    st.sidebar.write(f"Only available year: {year_min}")
-    selected_years = (year_min, year_max)
-else:
-    selected_years = st.sidebar.slider(
-        "Select Year Range",
-        min_value=year_min,
-        max_value=year_max,
-        value=(year_min, year_max),
-    )
+selected_years = st.sidebar.slider(
+    "Select Year Range",
+    min_value=year_min,
+    max_value=year_max,
+    value=(year_min, year_max),
+)
 
 filtered = filtered[
     (filtered["Start Year"] >= selected_years[0]) &
     (filtered["Start Year"] <= selected_years[1])
 ]
-
-if filtered.empty:
-    st.warning("No records found for the selected filters.")
-    st.stop()
 
 # Metrics
 total_events = len(filtered)
@@ -76,34 +61,36 @@ avg_loss = filtered["Total Damage ('000 US$)"].mean(skipna=True)
 
 col1, col2, col3, col4 = st.columns(4)
 col1.metric("Total Events", f"{total_events:,}")
-col2.metric("Total Economic Loss ('000 US$)", f"{total_loss:,.0f}" if pd.notna(total_loss) else "N/A")
-col3.metric("Total Deaths", f"{total_deaths:,.0f}" if pd.notna(total_deaths) else "N/A")
+col2.metric("Total Economic Loss ('000 US$)", f"{total_loss:,.0f}")
+col3.metric("Total Deaths", f"{total_deaths:,.0f}")
 col4.metric("Average Loss per Event ('000 US$)", f"{avg_loss:,.0f}" if pd.notna(avg_loss) else "N/A")
 
 # Events per year
 st.subheader(f"Number of {selected_hazard} Disasters Per Year")
+
 events_per_year = filtered.groupby("Start Year").size().sort_index()
 st.bar_chart(events_per_year)
 
 # Economic loss by year
 st.subheader(f"Economic Loss by Year, {selected_hazard}")
+
 loss_by_year = (
     filtered.groupby("Start Year")["Total Damage ('000 US$)"]
     .sum()
     .sort_index()
 )
 
-if not loss_by_year.empty:
-    fig_loss_year = px.line(
-        x=loss_by_year.index,
-        y=loss_by_year.values,
-        labels={"x": "Year", "y": "Total Damage ('000 US$)"},
-        title=f"Total Economic Loss by Year, {selected_hazard}",
-    )
-    st.plotly_chart(fig_loss_year, use_container_width=True)
+fig_loss_year = px.line(
+    x=loss_by_year.index,
+    y=loss_by_year.values,
+    labels={"x": "Year", "y": "Total Damage ('000 US$)"},
+    title=f"Total Economic Loss by Year, {selected_hazard}",
+)
+st.plotly_chart(fig_loss_year, use_container_width=True)
 
 # Top countries
 st.subheader(f"Top 10 Countries by {selected_hazard} Loss")
+
 loss_by_country = (
     filtered.groupby("Country")["Total Damage ('000 US$)"]
     .sum()
@@ -111,17 +98,17 @@ loss_by_country = (
     .head(10)
 )
 
-if not loss_by_country.empty:
-    fig_country = px.bar(
-        x=loss_by_country.index,
-        y=loss_by_country.values,
-        labels={"x": "Country", "y": "Total Damage ('000 US$)"},
-        title=f"Top 10 Countries by {selected_hazard} Loss",
-    )
-    st.plotly_chart(fig_country, use_container_width=True)
+fig_country = px.bar(
+    x=loss_by_country.index,
+    y=loss_by_country.values,
+    labels={"x": "Country", "y": "Total Damage ('000 US$)"},
+    title=f"Top 10 Countries by {selected_hazard} Loss",
+)
+st.plotly_chart(fig_country, use_container_width=True)
 
 # Distribution of losses
 st.subheader("Distribution of Disaster Losses")
+
 losses = filtered["Total Damage ('000 US$)"].dropna()
 losses = losses[losses > 0]
 
@@ -139,6 +126,7 @@ else:
 
 # Monte Carlo simulation
 st.subheader("Monte Carlo Catastrophe Loss Simulation")
+
 if len(losses) > 0:
     np.random.seed(42)
     simulated_losses = np.random.choice(losses, size=1000, replace=True)
@@ -164,19 +152,16 @@ else:
 
 # Data preview
 st.subheader("Filtered Data Preview")
-
-columns_to_show = [
-    "Country",
-    "Disaster Type",
-    "Start Year",
-    "Total Damage ('000 US$)",
-    "Insured Damage ('000 US$)",
-    "Total Deaths",
-]
-
-available_columns = [col for col in columns_to_show if col in filtered.columns]
-
 st.dataframe(
-    filtered[available_columns].sort_values("Start Year"),
+    filtered[
+        [
+            "Country",
+            "Disaster Type",
+            "Start Year",
+            "Total Damage ('000 US$)",
+            "Insured Damage ('000 US$)",
+            "Total Deaths",
+        ]
+    ].sort_values("Start Year"),
     use_container_width=True,
 )
