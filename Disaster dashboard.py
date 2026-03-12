@@ -29,7 +29,7 @@ df = load_data()
 st.title("Global Disaster Risk Dashboard")
 st.markdown("Interactive catastrophe risk dashboard using full EM-DAT disaster data.")
 
-# Clean core fields
+# Cleaning core fields
 data = df.copy()
 data = data.dropna(subset=["Start Year"])
 data["Start Year"] = data["Start Year"].astype(int)
@@ -49,6 +49,25 @@ col1.metric("Total Events", f"{total_events:,}")
 col2.metric("Total Economic Loss ('000 US$)", f"{total_loss:,.0f}" if pd.notna(total_loss) else "N/A")
 col3.metric("Total Deaths", f"{total_deaths:,.0f}" if pd.notna(total_deaths) else "N/A")
 col4.metric("Average Loss per Event ('000 US$)", f"{avg_loss:,.0f}" if pd.notna(avg_loss) else "N/A")
+
+#Number of Disasters Per Type
+st.subheader("Number of Disasters by Type")
+
+events_by_type = (
+    data.groupby("Disaster Type")
+    .size()
+    .sort_values(ascending=False)
+    .head(10)
+)
+
+fig_type_events = px.bar(
+    x=events_by_type.index,
+    y=events_by_type.values,
+    labels={"x": "Disaster Type", "y": "Number of Events"},
+    title="Top 10 Disaster Types by Frequency"
+)
+
+st.plotly_chart(fig_type_events, use_container_width=True)
 
 # Events per year
 st.subheader("Number of Disasters Per Year")
