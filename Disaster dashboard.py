@@ -1,14 +1,13 @@
 import streamlit as st
 import pandas as pd
+from pathlib import Path
 
-df = pd.read_excel("emdat_disasters.xlsx")
-
-losses = df["Total Damage ('000 US$)"].dropna()
-losses = losses[losses > 0]
+file_path = Path(__file__).parent / "emdat_disasters.xlsx"
+df = pd.read_excel(file_path)
 
 st.title("Global Disaster Risk Dashboard")
 
-hazard = st.selectbox("Select Disaster Type", df["Disaster Type"].unique())
+hazard = st.selectbox("Select Disaster Type", sorted(df["Disaster Type"].dropna().unique()))
 
 filtered = df[df["Disaster Type"] == hazard]
 
